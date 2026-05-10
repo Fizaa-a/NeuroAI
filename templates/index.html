@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroStress AI - Select Role</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .role-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 3rem;
+            min-height: 80vh;
+            text-align: center;
+        }
+
+        .role-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 4rem 3rem;
+            width: 400px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            text-decoration: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .role-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 30px 60px rgba(59, 130, 246, 0.2);
+        }
+
+        .role-icon {
+            width: 80px;
+            height: 80px;
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .role-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .role-desc {
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 1.05rem;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-top: 4rem;
+            padding: 0 2rem;
+        }
+
+        .header-title h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="logo">
+            <i data-lucide="brain-circuit"></i>
+            <span>NeuroStress AI</span>
+        </div>
+        <div class="nav-links">
+            <span class="status-indicator ready" id="system-status">System Online</span>
+        </div>
+    </nav>
+
+    <div class="header-title">
+        <h1>Select Workspace</h1>
+        <p class="subtitle" style="font-size: 1.2rem;">Choose your platform deployment mode based on your current
+            clinical or research objectives.</p>
+    </div>
+
+    <main class="role-container">
+
+        <!-- Patient Mode -->
+        <a href="/patient" class="role-card">
+            <i data-lucide="activity" class="role-icon"></i>
+            <h2 class="role-title">Patient Portal</h2>
+            <p class="role-desc">Simplified clinical dashboard for rapid EEG stress detection, live inference, and
+                immediate diagnostic feedback.</p>
+            <div class="btn btn-primary" style="margin-top: auto; padding: 1rem 2rem;">Launch Patient Space</div>
+        </a>
+
+        <!-- Academician Mode -->
+        <a href="/researcher" class="role-card" style="border-color: rgba(139, 92, 246, 0.3)">
+            <i data-lucide="test-tubes" class="role-icon"
+                style="color: var(--accent); background: rgba(139, 92, 246, 0.1);"></i>
+            <h2 class="role-title">Academic Lab</h2>
+            <p class="role-desc">Advanced researcher console with comprehensive quantitative analysis, frequency band
+                tracking, and model performance metrics.</p>
+            <div class="btn btn-primary"
+                style="background: linear-gradient(135deg, var(--accent), #d946ef); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); margin-top: auto; padding: 1rem 2rem;">
+                Launch Research Lab</div>
+        </a>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

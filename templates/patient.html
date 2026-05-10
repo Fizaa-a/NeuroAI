@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEG Stress Analysis Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="logo">
+            <a href="/" class="back-btn"><i data-lucide="arrow-left" style="width: 20px;"></i></a>
+            <i data-lucide="brain-circuit"></i>
+            <span>NeuroStress AI</span>
+        </div>
+        <div class="nav-links">
+            <span class="status-indicator" id="system-status">Checking System...</span>
+        </div>
+    </nav>
+
+    <main class="dashboard-container">
+
+        <!-- Left Side: File Upload Panel -->
+        <section class="upload-panel glass-card">
+            <h2>Patient Analysis Mode</h2>
+            <p class="subtitle">Upload a raw EEG sequence (.edf) to begin neural signal stress detection.</p>
+
+            <div class="upload-area" id="drop-zone">
+                <i data-lucide="upload-cloud" class="upload-icon"></i>
+                <h3>Drag & Drop EDF File</h3>
+                <p>or</p>
+                <input type="file" id="file-input" accept=".edf" hidden>
+                <button class="btn btn-outline" onclick="document.getElementById('file-input').click()">Browse Local
+                    Files</button>
+                <div id="file-name-display" class="file-name"></div>
+            </div>
+
+            <!-- Analysis Action -->
+            <div class="action-area">
+                <button id="btn-analyze" class="btn btn-primary" onclick="startAnalysis()" disabled>
+                    <i data-lucide="zap"></i> Start AI Scan
+                </button>
+                <div class="progress-container hidden" id="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">Initializing AI Model...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Side: Results Panel -->
+        <section class="results-panel glass-card hidden" id="results-panel">
+            <div class="results-header">
+                <h2>Analysis Results</h2>
+                <div class="badge" id="overall-badge">N/A</div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">AI Confidence</span>
+                    <span class="metric-value" id="res-confidence">0.0%</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Stress Intensity</span>
+                    <span class="metric-value indicator-stress" id="res-stress-pct">0.0%</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Segments Scanned</span>
+                    <span class="metric-value" id="res-segments">0</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Relaxed Segments</span>
+                    <span class="metric-value indicator-relax" id="res-relaxed">0</span>
+                </div>
+            </div>
+
+            <div class="interpretation-box">
+                <h4>Diagnosis Detail</h4>
+                <p id="res-interpretation">Awaiting analysis data...</p>
+            </div>
+
+            <hr />
+
+            <!-- Grad-CAM Heatmap -->
+            <div class="heatmap-section">
+                <h3>Brain Activation Heatmap (Grad-CAM) <button id="btn-gradcam" class="btn btn-secondary btn-sm"
+                        onclick="loadGradCam()">Generate Map</button></h3>
+                <div class="heatmap-container" id="heatmap-container">
+                    <p class="helper-text">Click "Generate Map" to interpret neural activations.</p>
+                </div>
+                <img id="heatmap-image" class="heatmap-img hidden" src="" alt="Grad-CAM Brain Activation Map">
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // 1. System Status Check
+        async function checkStatus() {
+            try {
+                let res = await fetch('/api/status');
+                let data = await res.json();
+                let statusEl = document.getElementById('system-status');
+                if (data.status === "ready") {
+                    statusEl.innerText = "System Ready (Online)";
+                    statusEl.classList.add('ready');
+                }
+            } catch (err) {
+                console.warn(err);
+                document.getElementById('system-status').innerText = "System Offline";
+            }
+        }
+        checkStatus();
+
+        // 2. Drag & Drop Upload Handlers
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const btnAnalyze = document.getElementById('btn-analyze');
+
+        let currentFile = null;
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.edf')) {
+                alert("Please select a valid .EDF file format.");
+                return;
+            }
+            currentFile = file;
+            fileNameDisplay.innerHTML = `<i data-lucide="file-check-2"></i> ${file.name}`;
+            lucide.createIcons();
+            btnAnalyze.disabled = false;
+        }
+
+        // 3. Flow Trigger
+        async function startAnalysis() {
+            if (!currentFile) return;
+
+            // UI Update
+            btnAnalyze.classList.add('hidden');
+            document.getElementById('progress-container').classList.remove('hidden');
+            document.getElementById('progress-fill').style.width = '30%';
+            document.getElementById('progress-text').innerText = 'Uploading to Neural Engine...';
+
+            let formData = new FormData();
+            formData.append('file', currentFile);
+
+            try {
+                document.getElementById('progress-fill').style.width = '80%';
+                document.getElementById('progress-text').innerText = 'Analyzing Patterns (CNN)...';
+                // Perform Inference
+                let response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                let data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                // Show completion
+                document.getElementById('progress-fill').style.width = '100%';
+                document.getElementById('progress-text').innerText = 'Diagnosis Complete!';
+
+                setTimeout(() => { showResults(data.results); }, 600);
+
+            } catch (err) {
+                alert("AI Engine Error: " + err.message);
+                resetUI();
+            }
+        }
+
+        // 4. Render Results
+        function showResults(res) {
+            document.getElementById('results-panel').classList.remove('hidden');
+
+            // Badge logic
+            let badge = document.getElementById('overall-badge');
+            let isStressed = res.overall === "STRESSED";
+            badge.innerText = isStressed ? "🚨 STRESSED" : "✅ RELAXED";
+            badge.className = `badge ${isStressed ? 'badge-danger' : 'badge-success'}`;
+
+            // Metrics
+            document.getElementById('res-confidence').innerText = res.confidence.toFixed(1) + "%";
+            document.getElementById('res-stress-pct').innerText = res.stress_percentage.toFixed(1) + "%";
+            document.getElementById('res-relaxed').innerText = res.relaxed_segments;
+            document.getElementById('res-segments').innerText = res.total_segments;
+
+            // Interpretation
+            let text = "";
+            if (isStressed) {
+                if (res.stress_percentage > 80) text = "High stress level features detected across almost all brainwave segments. Consistent with high cognitive overload or anxiety patterns.";
+                else text = "Moderate stress signatures observed throughout the reading. Suggestive of active stress patterns.";
+            } else {
+                text = "Brainwave activity corresponds primarily with baseline relaxation patterns. No significant stress markers detected.";
+            }
+            document.getElementById('res-interpretation').innerText = text;
+
+            // Setup GradCAM visual
+            document.getElementById('heatmap-image').classList.add('hidden');
+            document.getElementById('heatmap-container').classList.remove('hidden');
+            document.getElementById('heatmap-container').innerHTML = `<p class="helper-text">Click "Generate Map" to interpret neural activations.</p>`;
+            document.getElementById('btn-gradcam').disabled = false;
+            document.getElementById('btn-gradcam').innerText = "Generate Map";
+
+            resetUI();
+        }
+
+        async function loadGradCam() {
+            let btn = document.getElementById('btn-gradcam');
+            let container = document.getElementById('heatmap-container');
+            let img = document.getElementById('heatmap-image');
+
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+            container.innerHTML = `<p class="helper-text">Building visual gradients (this may take a moment)...</p>`;
+
+            try {
+                let res = await fetch('/api/gradcam');
+                let data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                container.classList.add('hidden');
+                img.src = data.image;
+                img.classList.remove('hidden');
+                btn.innerText = "Map Loaded";
+            } catch (e) {
+                alert("GradCAM Error: " + e.message);
+                btn.disabled = false;
+                btn.innerText = "Retry generation";
+                container.innerHTML = `<p class="helper-text" style="color:red">Failed to generate map.</p>`;
+            }
+        }
+
+        function resetUI() {
+            btnAnalyze.classList.remove('hidden');
+            document.getElementById('progress-container').classList.add('hidden');
+            document.getElementById('progress-fill').style.width = '0%';
+        }
+
+    </script>
+</body>
+
+</html>
